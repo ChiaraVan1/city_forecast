@@ -371,6 +371,14 @@ def run_pipeline(history_file, oct_file):
     # 返回需要的内容
     return merged_df, city_list, export_path
 
+# 初始化 session_state
+if 'merged_df' not in st.session_state:
+    st.session_state.merged_df = None
+if 'city_list' not in st.session_state:
+    st.session_state.city_list = []
+if 'export_path' not in st.session_state:
+    st.session_state.export_path = None
+
 st.set_page_config(page_title = '城市报名收入预测', layout = 'wide')
 st.title("📈 城市报名收入监控平台")
 
@@ -393,18 +401,30 @@ if st.button("🚀 运行预测分析"):
         # 运行分析管道
         try:
             merged_df, city_list, export_path = run_pipeline(history_path, oct_path)
-
-            selected_cities = st.multiselect("选择要展示的城市", city_list, default=city_list[:3])
-            if selected_cities:
-                # 生成 plotly 以反映所选城市 
-                fig = plot_forecasts_interactive(merged_df, selected_cities)
-                st.plotly_chart(fig, use_container_width=True)  # 不需重新渲染整个页面
-
-            # 下载按钮
-            with open(export_path, "rb") as f:
-                st.download_button("📥 下载完整预测数据", f, file_name="城市预测结果.xlsx")
+            
+            # 保存结果到 session_state
+            st.session_state.merged_df = merged_df
+            st.session_state.city_list = city_list
+            st.session_state.export_path = export_path
 
         except Exception as e:
             st.error(f"运行过程中发生错误：{e}")
+
+# 如果 session_state 中有数据，则显示图表
+if st.session_state.merged_df is not None:
+    selected_cities = st.multiselect(
+        "选择要展示的城市",
+        st.session_state.city_list,
+        default=st.session_state.city_list[:3]
+    )
+    
+    if selected_cities:
+        # 生成 plotly 图表
+        fig = plot_forecasts_interactive(st.session_state.merged_df, selected_cities)
+        st.plotly_chart(fig, use_container_width=True)
+
+    # 下载按钮
+    with open(st.session_state.export_path, "rb") as f:
+        st.download_button("📥 下载完整预测数据", f, file_name="城市预测结果.xlsx")
 
 
