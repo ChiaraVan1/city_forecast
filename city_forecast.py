@@ -274,13 +274,12 @@ def forecast_cities(models, df, forecast_months=1):
 # 传入城市
 def plot_forecasts_interactive(forecast_df, selected_cities):
     # 筛选所选城市的数据
-    forecast_filtered = forecast_df[forecast_df['city'].isin(selected_cities)]
+    forecast_filtered = forecast_df[forecast_df['城市'].isin(selected_cities)]
 
-    fig = px.line(forecast_filtered, x='timestamp', y='forecast', color='city', title='City-wise Forecasts')
+    fig = px.line(forecast_filtered, x='时间', y='报名收入增幅', color='城市', title='City-wise Forecasts')
     fig.update_layout(title='Forecasts for Selected Cities', xaxis_title='Time', yaxis_title='Forecast')
 
-    # 返回 HTML 字符串
-    return fig.to_html(full_html=False, include_plotlyjs='cdn')
+    return fig
 
 def update_models_with_latest_data(models, df):
     """
@@ -334,29 +333,6 @@ def predict_latest_data(models, df):
     
     return predictions 
 
-# 开始按钮
-if st.button("🚀 运行预测分析"):
-    with st.spinner("模型运行中，请稍候..."):
-        if not uploaded_file or not uploaded_oct_file:
-            st.warning("请上传历史数据和10月数据。使用默认数据进行演示。")
-        history_path = uploaded_file if uploaded_file else default_file
-        oct_path = uploaded_oct_file if uploaded_oct_file else default_oct
-
-        # 运行分析管道
-        try:
-            forecast_df, plot_html, city_list, export_path = run_pipeline(history_path, oct_path)
-
-            selected_cities = st.multiselect("选择要展示的城市", city_list, default=city_list[:3])
-            if selected_cities:
-                st.components.v1.html(plot_html(selected_cities), height=800)
-
-            # 下载按钮
-            with open(export_path, "rb") as f:
-                st.download_button("📥 下载完整预测数据", f, file_name="城市预测结果.xlsx")
-
-        except Exception as e:
-            st.error(f"运行过程中发生错误：{e}")
-
 
 def run_pipeline(history_file, oct_file):
     # 加载 + 合并 + 预处理
@@ -383,19 +359,17 @@ def run_pipeline(history_file, oct_file):
     ], ignore_index=True)
 
     # 保存为 Excel
-    export_path = "data/M10_updated_predictions.xlsx"
+    export_path = r"d:/工作/WPScloud/1622414952/WPS企业云盘/新东方教育科技集团有限公司/我的企业文档/2025/04/收入增幅/M10_updated_predictions.xlsx"
     merged_df.to_excel(export_path, sheet_name="预测与历史对比", index=False)
-
-    forecast_df = load_forecast_data(history_path, oct_path)
     
     # 获取可选择的城市列表
-    city_list = forecast_df['city'].unique().tolist()
+    city_list = merged_df['城市'].unique().tolist()
     
     # 调用 plot_forecasts_interactive 函数并返回 HTML 字符串
-    plot_html = plot_forecasts_interactive(forecast_df, city_list)
+    plot_html = plot_forecasts_interactive(merged_df, city_list)
     
     # 返回需要的内容
-    return forecast_df, plot_html, city_list
+    return merged_df, city_list, export_path
 
 st.set_page_config(page_title = '城市报名收入预测', layout = 'wide')
 st.title("📈 城市报名收入监控平台")
@@ -408,13 +382,29 @@ uploaded_oct_file = st.file_uploader("上传当月（10月）数据 Excel", type
 default_file = r"D:\工作\WPScloud\1622414952\WPS企业云盘\新东方教育科技集团有限公司\我的企业文档\2025\04\收入增幅\Mdata1 2025-03-25 15_51_15.xlsx"
 default_oct = r"D:\工作\WPScloud\1622414952\WPS企业云盘\新东方教育科技集团有限公司\我的企业文档\2025\04\收入增幅\Mdata1 2025-10.xlsx"
 
-# 城市选择
-selected_cities = []
+# 开始按钮
+if st.button("🚀 运行预测分析"):
+    with st.spinner("模型运行中，请稍候..."):
+        if not uploaded_file or not uploaded_oct_file:
+            st.warning("请上传历史数据和10月数据。使用默认数据进行演示。")
+        history_path = uploaded_file if uploaded_file else default_file
+        oct_path = uploaded_oct_file if uploaded_oct_file else default_oct
 
-forecast_df, plot_html, city_list = run_pipeline(history_path, oct_path)
+        # 运行分析管道
+        try:
+            merged_df, city_list, export_path = run_pipeline(history_path, oct_path)
 
-selected_cities = st.multiselect("选择要展示的城市", city_list, default=city_list[:3])
+            selected_cities = st.multiselect("选择要展示的城市", city_list, default=city_list[:3])
+            if selected_cities:
+                # 生成 plotly 以反映所选城市 
+                fig = plot_forecasts_interactive(merged_df, selected_cities)
+                st.plotly_chart(fig, use_container_width=True)  # 不需重新渲染整个页面
 
-if selected_cities:
-    st.components.v1.html(plot_html, height=800)
+            # 下载按钮
+            with open(export_path, "rb") as f:
+                st.download_button("📥 下载完整预测数据", f, file_name="城市预测结果.xlsx")
+
+        except Exception as e:
+            st.error(f"运行过程中发生错误：{e}")
+
 
