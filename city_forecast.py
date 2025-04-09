@@ -1,33 +1,3 @@
-'''city_forecast_app/
-│
-├── app.py                       # 主 Streamlit 应用入口
-├── config.py                    # 配置参数（如模型路径、全局参数等）
-├── requirements.txt             # 所需依赖
-│
-├── data/                        # 存放原始和预处理后数据
-│   ├── raw/
-│   └── processed/
-│
-├── models/                      # 模型相关（训练/加载/预测）
-│   ├── model.py
-│   └── trainer.py
-│
-├── pipeline/                    # 数据流控制（加载、预测全流程）
-│   └── pipeline.py
-│
-├── preprocessing/              # 特征工程与数据清洗
-│   └── preprocessing.py
-│
-├── plotting/                   # 所有可视化函数（plotly 或 matplotlib）
-│   └── plot.py
-│
-├── utils/                      # 工具函数（如日志、缓存、时间处理等）
-│   └── utils.py
-│
-└── notebooks/                  # 实验/调试用 VBA
-'''
-
-
 # 导入核心库 
 import pandas as pd 
 import numpy as np 
@@ -273,11 +243,55 @@ def forecast_cities(models, df, forecast_months=1):
 
 # 传入城市
 def plot_forecasts_interactive(forecast_df, selected_cities):
-    # 筛选所选城市的数据
-    forecast_filtered = forecast_df[forecast_df['城市'].isin(selected_cities)]
+    """
+    绘制交互式预测图，区分实际值和预测值。
+    - forecast_df: 已经过滤只包含 selected_cities 的 DataFrame
+    - selected_cities: 保证颜色一致性
+    """
+    fig = go.Figure()
 
-    fig = px.line(forecast_filtered, x='时间', y='报名收入增幅', color='城市', title='City-wise Forecasts')
-    fig.update_layout(title='Forecasts for Selected Cities', xaxis_title='Time', yaxis_title='Forecast')
+    # 用 px 分配颜色
+    color_map = px.colors.qualitative.Set2
+    city_color_dict = {
+        city: color_map[i % len(color_map)]
+        for i, city in enumerate(selected_cities)
+    }
+
+    for city in selected_cities:
+        city_data = forecast_df[forecast_df['城市'] == city]
+
+        # 实际数据：实线
+        actual = city_data[city_data['来源'] == '实际']
+        fig.add_trace(go.Scatter(
+            x=actual['时间'],
+            y=actual['报名收入增幅'],
+            mode='lines+markers',
+            name=f'{city} - 实际',
+            line=dict(color=city_color_dict[city], dash='solid'),
+            marker=dict(symbol='circle', size=6)
+        ))
+
+        # 预测数据：虚线
+        pred = city_data[city_data['来源'] == '预测']
+        fig.add_trace(go.Scatter(
+            x=pred['时间'],
+            y=pred['报名收入增幅'],
+            mode='lines+markers',
+            name=f'{city} - 预测',
+            line=dict(color=city_color_dict[city], dash='dash'),
+            marker=dict(symbol='diamond', size=6)
+        ))
+
+    fig.update_layout(
+        title='城市报名收入增幅预测 vs 实际',
+        xaxis_title='时间',
+        yaxis_title='报名收入增幅',
+        legend_title='城市与数据类型',
+        hovermode='x unified',
+        template='plotly_white',
+        height=600
+    )
+
 
     return fig
 
@@ -351,12 +365,15 @@ def run_pipeline(history_file, oct_file):
     models = update_models_with_latest_data(models, df_eng)
     predictions = predict_latest_data(models, df_eng)
 
+    # 新增标签
+    actual = df[['时间', '城市', '报名收入增幅']].copy()
+    actual['来源'] = '实际' 
+    pred = predictions.rename(columns={'预测值': '报名收入增幅'}).copy()
+    pred['来源'] = '预测'
+
+
     # 合并预测 + 原始数据
-    predictions = predictions.rename(columns={'预测值': '报名收入增幅'})
-    merged_df = pd.concat([
-        df[['时间', '城市', '报名收入增幅']],
-        predictions
-    ], ignore_index=True)
+    merged_df = pd.concat([actual, pred], ignore_index=True)
 
     # 保存为 Excel
     export_path = r"d:/工作/WPScloud/1622414952/WPS企业云盘/新东方教育科技集团有限公司/我的企业文档/2025/04/收入增幅/M10_updated_predictions.xlsx"
