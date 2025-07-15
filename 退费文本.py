@@ -31,7 +31,7 @@ import numpy as np
 # 步骤 1: 准备数据
 # ==============================================================================
 print("--- 步骤 1: 加载模拟数据 ---")
-df = pd.read_excel(r"D:\工作\WPScloud\1622414952\WPS企业云盘\新东方教育科技集团有限公司\我的企业文档\2025\07\退费\biz_memo.xlsx")
+df = pd.read_excel(r"D:\工作\WPScloud\1622414952\WPS企业云盘\我的企业文档\2025\07\退费\biz_memo.xlsx")
 print("原始数据加载完毕：")
 print(df)
 print("\n" + "="*80 + "\n")
@@ -258,6 +258,6 @@ print("所有结果已整合到主DataFrame。")
 # ==============================================================================
 print("\n--- 步骤 5: 最终分析与总结 ---")
 print(df['final_category'].value_counts())
-output_filename = r"D:\工作\WPScloud\1622414952\WPS企业云盘\新东方教育科技集团有限公司\我的企业文档\2025\07\退费\refund_reason_classification_result.xlsx"
+output_filename = r"D:\工作\WPScloud\1622414952\WPS企业云盘\我的企业文档\2025\07\退费\refund_reason_classification_result.xlsx"
 df.to_excel(output_filename, index=False)
 print(f"\n任务完成！详细分类结果已保存至文件: {output_filename}")
